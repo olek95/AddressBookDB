@@ -17,7 +17,7 @@
                <children>
                   <Label layoutX="57.0" layoutY="50.0" text="Imię:" />
                   <TextField fx:id="nameTextField" layoutX="98.0" layoutY="46.0" />
-                  <Label layoutX="283.0" layoutY="86.0" text="(zostaw puste pole, jeśli chcesz wyszukać wartość dowolną)" />
+                  <Label layoutX="180.0" layoutY="86.0" text="(zostaw puste pole, jeśli chcesz wyszukać wartość dowolną; przy dodaniu uzupełnij wszystko)" />
                   <Label layoutX="320.0" layoutY="50.0" text="Nazwisko:" />
                   <TextField fx:id="lastNameTextField" layoutX="385.0" layoutY="46.0" />
                   <Label layoutX="581.0" layoutY="50.0" text="Adres email:" />
@@ -28,18 +28,20 @@
          <bottom>
             <Pane prefHeight="73.0" prefWidth="879.0" BorderPane.alignment="CENTER">
                <children>
-                  <Button fx:id="searchButton" layoutX="270.0" layoutY="24.0" mnemonicParsing="false" onAction="#searchAction" text="Wyszukaj" />
-                  <Button fx:id="exitButton" layoutX="556.0" layoutY="24.0" mnemonicParsing="false" text="Zamknij" />
-                  <Button fx:id="saveButton" layoutX="414.0" layoutY="24.0" mnemonicParsing="false" text="Zapisz" />
+                  <Button fx:id="searchButton" layoutX="200.0" layoutY="24.0" mnemonicParsing="false" onAction="#searchAction" text="Wyszukaj" />
+                  <Button fx:id="exitButton" layoutX="600.0" layoutY="24.0" mnemonicParsing="false" text="Zamknij" />
+                  <Button fx:id="saveButton" layoutX="400.0" layoutY="24.0" mnemonicParsing="false" onAction="#saveAction" text="Zapisz" />
+                  <Button fx:id="addButton" layoutX="300.0" layoutY="24.0" mnemonicParsing="false" onAction="#addAction" text="Dodaj" />
+                  <Button fx:id="deleteButton" layoutX="500.0" layoutY="24.0" mnemonicParsing="false" onAction="#deleteAction" text="Usun" />
                </children>
             </Pane>
          </bottom>
          <center>
             <TableView fx:id="informationTableView" prefHeight="200.0" prefWidth="200.0" BorderPane.alignment="CENTER">
               <columns>
-                <TableColumn editable="false" prefWidth="293.0" sortable="false" text="IMIĘ" />
-                <TableColumn editable="false" prefWidth="293.0" sortable="false" text="NAZWISKO" />
-                  <TableColumn editable="false" prefWidth="293.0" sortable="false" text="ADRES EMAIL" />
+                <TableColumn fx:id="nameColumn" editable="false" prefWidth="295.6" sortable="false" text="IMIĘ" />
+                <TableColumn fx:id="lastNameColumn" editable="false" prefWidth="295.6" sortable="false" text="NAZWISKO" />
+                  <TableColumn fx:id="emailColumn" editable="false" prefWidth="295.6" sortable="false" text="ADRES EMAIL" />
               </columns>
             </TableView>
          </center>
