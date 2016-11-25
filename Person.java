@@ -8,7 +8,9 @@ package addressbookdb;
  */
 public class Person implements Comparable<Person>{
     private String name, lastName, email;
-    public Person(String name, String lastName, String email){
+    private int id; // indeks niewidoczny dla użytkownika, występuje w celu sprawdzenia istnienia wiersza w bazie
+    public Person(int id, String name, String lastName, String email){
+        this.id = id;
         this.name = name;
         this.lastName = lastName; 
         this.email = email; 
@@ -51,5 +53,12 @@ public class Person implements Comparable<Person>{
      */
     public String getEmail(){
         return email;
+    }
+    /**
+     * Zwraca nr id osoby w bazie danych. 
+     * @return nr id
+     */
+    public int getId(){
+        return id;
     }
 }
