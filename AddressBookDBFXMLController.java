@@ -1,8 +1,5 @@
 package addressbookdb;
 
-import java.io.BufferedReader;
-import java.io.FileReader;
-import java.io.IOException;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -50,9 +47,8 @@ public class AddressBookDBFXMLController implements Initializable {
             if((name.equals("") || isCorrectName(name)) && (lastName.equals("") || isCorrectName(lastName)) && (email.equals("") || isCorrectEmail(email))){
                 rows = FXCollections.observableArrayList();
                 for(Person p : people)
-                    if(!name.equals("") && p.getName().equals(name) || name.equals(""))
-                        if(!lastName.equals("") && p.getLastName().equals(lastName) || lastName.equals(""))
-                            if(!email.equals("") && p.getEmail().equals(email) || email.equals(""))
+                    if((name.equals("") || p.getName().equals(name)) && (lastName.equals("") || p.getLastName().equals(lastName))
+                            && (email.equals("") || p.getEmail().equals(email)))
                                 rows.add(p);
                 nameColumn.setCellValueFactory(new PropertyValueFactory("name"));
                 lastNameColumn.setCellValueFactory(new PropertyValueFactory("lastName"));
@@ -98,14 +94,22 @@ public class AddressBookDBFXMLController implements Initializable {
                 while(rs.next())
                     usedId.add(rs.getInt("id"));
                 PreparedStatement prepStat = conn.prepareStatement("INSERT INTO Person VALUES(?, ?, ?, ?)");
-                for(Person p : people)
-                    if(!usedId.contains(p.getId())){
+                for(Person p : people){
+                    int id = p.getId();
+                    if(!usedId.contains(id)){
                         prepStat.setInt(1, p.getId());
                         prepStat.setString(2, p.getName());
                         prepStat.setString(3, p.getLastName());
                         prepStat.setString(4, p.getEmail());
                         prepStat.executeUpdate();
-                    }
+                    }else usedId.remove((Integer)id);
+                    
+                }
+                prepStat = conn.prepareStatement("DELETE FROM Person WHERE id = ?");
+                for(int id : usedId){
+                    prepStat.setInt(1, id);
+                    prepStat.executeUpdate();
+                }
             }catch(SQLException e){
                 Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
             }
@@ -120,13 +124,10 @@ public class AddressBookDBFXMLController implements Initializable {
             try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
                 String name = nameTextField.getText().trim(), lastName = lastNameTextField.getText().trim(), 
                         email = emailTextField.getText().trim(); 
-                PreparedStatement stat = conn.prepareStatement("DELETE FROM Person WHERE id = ?");
                 for(int i = 0; i < people.size(); i++){
                     Person p = people.get(i);
-                    if((!name.equals("") || name.equals(p.getName())) && (!lastName.equals("") || lastName.equals(p.getName()))
-                            && (!email.equals("") || email.equals(p.getEmail()))){
-                        stat.setInt(1, p.getId());
-                        stat.executeUpdate();
+                    if((name.equals("") || p.getName().equals(name)) && (lastName.equals("") || p.getLastName().equals(lastName))
+                            && (email.equals("") || p.getEmail().equals(email))){
                         rows.remove(p);
                         people.remove(p);
                         i--;
@@ -201,7 +202,6 @@ public class AddressBookDBFXMLController implements Initializable {
                 if(id == p.getId()) used = true;
             }while(!used && i < size);
         }while(id < Integer.MAX_VALUE && used);
-        System.out.println(id);
         return id;
     }
 }
