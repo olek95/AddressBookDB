@@ -55,16 +55,12 @@ public class AddressBookDBFXMLController implements Initializable {
                 emailColumn.setCellValueFactory(new PropertyValueFactory("email"));
                 informationTableView.setItems(rows);
             }else{
-                Alert incorrectFormatAlert = new Alert(AlertType.ERROR);
-                incorrectFormatAlert.setHeaderText("Złe dane. Imię i nazwisko powinno składać się z liter, "
+                showAlert(AlertType.ERROR, "Złe dane. Imię i nazwisko powinno składać się z liter, "
                         + "a email mieć postać: tekst@tekst.test,\n gdzie tekst to liczby, małe litery, duże litery. "
                         + "Tekst po @ może wystąpić w dowolnej liczbie,\n lecz ma być oddzielony kropką.");
-                incorrectFormatAlert.showAndWait();
             }
         }catch(IllegalArgumentException e){
-            Alert incorrectFormatAlert = new Alert(AlertType.ERROR);
-            incorrectFormatAlert.setHeaderText(e.getMessage());
-            incorrectFormatAlert.showAndWait();
+            showAlert(AlertType.ERROR, e.getMessage());
         }
     }
     @FXML
@@ -76,11 +72,9 @@ public class AddressBookDBFXMLController implements Initializable {
             people.add(p);
             rows.add(p);
         }else{
-            Alert incorrectFormatAlert = new Alert(AlertType.ERROR);
-            incorrectFormatAlert.setHeaderText("Złe dane. Imię i nazwisko powinno składać się z liter, "
+            showAlert(AlertType.ERROR, "Złe dane. Imię i nazwisko powinno składać się z liter, "
                 + "a email mieć postać: tekst@tekst.test,\n gdzie tekst to liczby, małe litery, duże litery. "
                 + "Tekst po @ może wystąpić w dowolnej liczbie,\n lecz ma być oddzielony kropką. Żadne pole nie może być puste.");
-            incorrectFormatAlert.showAndWait();
         }
     }
     @FXML
@@ -203,5 +197,10 @@ public class AddressBookDBFXMLController implements Initializable {
             }while(!used && i < size);
         }while(id < Integer.MAX_VALUE && used);
         return id;
+    }
+    private void showAlert(AlertType type, String text){
+        Alert alert = new Alert(type);
+        alert.setHeaderText(text);
+        alert.showAndWait();
     }
 }
