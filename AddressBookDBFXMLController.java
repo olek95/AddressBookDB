@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,16 +21,18 @@ import javafx.fxml.Initializable;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 public class AddressBookDBFXMLController implements Initializable {
+    private boolean changed;
     private ArrayList<Person> people;
     private ObservableList<Person> rows;
     @FXML
-    private Button exitButton;
+    private Button exitButton, saveButton, deleteButton, addButton;
     @FXML
     private TextField nameTextField, lastNameTextField, emailTextField;
     @FXML
@@ -38,8 +41,13 @@ public class AddressBookDBFXMLController implements Initializable {
     private TableColumn<Person, String> nameColumn, lastNameColumn, emailColumn;
     @FXML
     private void searchAction(ActionEvent event) {
-        people = null;
-        rows = null;
+        if(changed){
+            Alert changedAlert = new Alert(AlertType.CONFIRMATION);
+            changedAlert.setHeaderText("Zmieniono zawartość tabeli w programie. Wciśnięcie OK usunie zmiany.");
+            Optional<ButtonType> result = changedAlert.showAndWait();
+            if(result.get().equals(ButtonType.CANCEL)) return;
+        }
+        changed = false;
         try{
             people = readDatabase();
             String name = nameTextField.getText().trim(), lastName = lastNameTextField.getText().trim(),
@@ -65,22 +73,24 @@ public class AddressBookDBFXMLController implements Initializable {
     }
     @FXML
     private void addAction(ActionEvent event){
-        String name = nameTextField.getText().trim(), lastName = lastNameTextField.getText().trim(), 
-                email = emailTextField.getText().trim(); 
-        if(isCorrectName(name) && isCorrectName(lastName) && isCorrectEmail(email)){
-            Person p = new Person(findAvailableId(), name, lastName, email); 
-            people.add(p);
-            rows.add(p);
-        }else{
-            showAlert(AlertType.ERROR, "Złe dane. Imię i nazwisko powinno składać się z liter, "
-                + "a email mieć postać: tekst@tekst.test,\n gdzie tekst to liczby, małe litery, duże litery. "
-                + "Tekst po @ może wystąpić w dowolnej liczbie,\n lecz ma być oddzielony kropką. Żadne pole nie może być puste.");
+        if(people != null){
+            String name = nameTextField.getText().trim(), lastName = lastNameTextField.getText().trim(), 
+                    email = emailTextField.getText().trim(); 
+            if(isCorrectName(name) && isCorrectName(lastName) && isCorrectEmail(email)){
+                changed = true;
+                Person p = new Person(findAvailableId(), name, lastName, email); 
+                people.add(p);
+                rows.add(p);
+            }else{
+                showAlert(AlertType.ERROR, "Złe dane. Imię i nazwisko powinno składać się z liter, "
+                    + "a email mieć postać: tekst@tekst.test,\n gdzie tekst to liczby, małe litery, duże litery. "
+                    + "Tekst po @ może wystąpić w dowolnej liczbie,\n lecz ma być oddzielony kropką. Żadne pole nie może być puste.");
+            }
         }
     }
     @FXML
     private void saveAction(ActionEvent event){
-        try{
-            Class.forName("com.mysql.jdbc.Driver");
+        if(people != null){
             try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
                 Statement stat = conn.createStatement();
                 ResultSet rs = stat.executeQuery("SELECT id FROM Person");
@@ -97,80 +107,74 @@ public class AddressBookDBFXMLController implements Initializable {
                         prepStat.setString(4, p.getEmail());
                         prepStat.executeUpdate();
                     }else usedId.remove((Integer)id);
-                    
                 }
                 prepStat = conn.prepareStatement("DELETE FROM Person WHERE id = ?");
                 for(int id : usedId){
                     prepStat.setInt(1, id);
                     prepStat.executeUpdate();
                 }
+                changed = false;
             }catch(SQLException e){
                 Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
             }
-        }catch(ClassNotFoundException e){
-            Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
         }
     }
     @FXML
     private void deleteAction(ActionEvent event){
-        try{
-            Class.forName("com.mysql.jdbc.Driver");
-            try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
-                String name = nameTextField.getText().trim(), lastName = lastNameTextField.getText().trim(), 
-                        email = emailTextField.getText().trim(); 
-                for(int i = 0; i < people.size(); i++){
-                    Person p = people.get(i);
-                    if((name.equals("") || p.getName().equals(name)) && (lastName.equals("") || p.getLastName().equals(lastName))
-                            && (email.equals("") || p.getEmail().equals(email))){
-                        rows.remove(p);
-                        people.remove(p);
-                        i--;
-                    }
+        if(people != null){
+            String name = nameTextField.getText().trim(), lastName = lastNameTextField.getText().trim(), 
+                    email = emailTextField.getText().trim(); 
+            int sizeBefore = people.size(); 
+            for(int i = 0; i < people.size(); i++){
+                Person p = people.get(i);
+                if((name.equals("") || p.getName().equals(name)) && (lastName.equals("") || p.getLastName().equals(lastName)) 
+                        && (email.equals("") || p.getEmail().equals(email))){
+                    rows.remove(p);
+                    people.remove(p);
+                    i--; // po usunięciu elementy listy się cofają, więc należy sprawdzić jeszcze raz ten sam indeks
                 }
-            }catch(SQLException e){
-                Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
             }
-        }catch(ClassNotFoundException e){
-            Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
+            if(sizeBefore != people.size()) changed = true;
         }
     }
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         exitButton.setOnAction(event -> {
+            if(changed){
+                Alert changedAlert = new Alert(AlertType.CONFIRMATION);
+                changedAlert.setHeaderText("Zmieniono zawartość tabeli w programie. Wciśnięcie OK usunie zmiany.");
+                Optional<ButtonType> result = changedAlert.showAndWait();
+                if(result.get().equals(ButtonType.CANCEL)) return;
+            }
            System.exit(0); 
         });
     }    
     private ArrayList<Person> readDatabase() throws IllegalArgumentException{
         ArrayList<Person> people = new ArrayList();
-        try{
-            Class.forName("com.mysql.jdbc.Driver");
-            try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
-                String[] row;
-                Statement stat = conn.createStatement();
-                ResultSet rs = stat.executeQuery("SELECT * FROM Person");
-                while(rs.next()){
-                    row = new String[4];
-                    row[0] = rs.getString("id");
-                    row[1] = rs.getString("name");
-                    row[2] = rs.getString("lastname");
-                    row[3] = rs.getString("email");
-                    if(isCorrectDatabaseFormat(row))
-                        people.add(new Person(Integer.parseInt(row[0]), row[1], row[2], row[3]));
-                    else{
-                        people = null;
-                        throw new IllegalArgumentException("Niepoprawny format zawartości bazy danych."
-                            + " Każdy wiersz powinien zawierać 4 wartości.\n Imię i nazwisko "
-                            + "powinno składać się z liter, a email mieć postać: tekst@tekst.tekst,\n gdzie tekst to liczby, małe litery, duże litery."
-                            + " Tekst po @ może wystąpić w dowolnej liczbie,\n lecz ma być oddzielony kropką.");
-                    }
+        try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
+            String[] row;
+            Statement stat = conn.createStatement();
+            ResultSet rs = stat.executeQuery("SELECT * FROM Person");
+            while(rs.next()){
+                row = new String[4];
+                row[0] = rs.getString("id");
+                row[1] = rs.getString("name");
+                row[2] = rs.getString("lastname");
+                row[3] = rs.getString("email");
+                if(isCorrectDatabaseFormat(row))
+                    people.add(new Person(Integer.parseInt(row[0]), row[1], row[2], row[3]));
+                else{
+                    people = null;
+                    throw new IllegalArgumentException("Niepoprawny format zawartości bazy danych."
+                        + " Każdy wiersz powinien zawierać 4 wartości.\n Imię i nazwisko "
+                        + "powinno składać się z liter, a email mieć postać: tekst@tekst.tekst,\n gdzie tekst to liczby, małe litery, duże litery."
+                        + " Tekst po @ może wystąpić w dowolnej liczbie,\n lecz ma być oddzielony kropką.");
                 }
-                Collections.sort(people);
+            }
+            Collections.sort(people);
             }catch(SQLException e){
                 Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
             }
-        }catch(ClassNotFoundException e){
-            Logger.getLogger(AddressBookDBFXMLController.class.getName()).log(Level.SEVERE, null, e);
-        }
         return people;
     }
     private boolean isCorrectDatabaseFormat(String[] components){
