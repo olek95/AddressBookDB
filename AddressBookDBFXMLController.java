@@ -18,14 +18,23 @@ import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.geometry.Insets;
+import javafx.scene.Node;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
+import javafx.scene.control.Label;
+import javafx.scene.control.PasswordField;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.GridPane;
+import javafx.util.Pair;
 
 /**
  * Klasa <code>AddressBookDBFXMLController</code> reprezentuje sterowanie programem 
@@ -46,6 +55,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
  * @author AleksanderSklorz
  */
 public class AddressBookDBFXMLController implements Initializable {
+    private String login, password, url;
     private boolean changed;
     private ArrayList<Person> people;
     private ObservableList<Person> rows;
@@ -109,7 +119,7 @@ public class AddressBookDBFXMLController implements Initializable {
     @FXML
     private void saveAction(ActionEvent event){
         if(people != null){
-            try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
+            try(Connection conn = DriverManager.getConnection(url, login, password)){
                 Statement stat = conn.createStatement();
                 ResultSet rs = stat.executeQuery("SELECT id FROM Person");
                 ArrayList<Integer> usedId = new ArrayList(); 
@@ -157,6 +167,8 @@ public class AddressBookDBFXMLController implements Initializable {
     }
     @Override
     public void initialize(URL url, ResourceBundle rb) {
+        showLoginInformationDialog();
+        showURLDialog();
         exitButton.setOnAction(event -> {
             if(changed){
                 Alert changedAlert = new Alert(AlertType.CONFIRMATION);
@@ -169,7 +181,7 @@ public class AddressBookDBFXMLController implements Initializable {
     }    
     private ArrayList<Person> readDatabase() throws IllegalArgumentException{
         ArrayList<Person> people = new ArrayList();
-        try(Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/ksiazkaadresowa", "olek", "haslo12345")){
+        try(Connection conn = DriverManager.getConnection(url, login, password)){
             String[] row;
             Statement stat = conn.createStatement();
             ResultSet rs = stat.executeQuery("SELECT * FROM Person");
@@ -224,5 +236,48 @@ public class AddressBookDBFXMLController implements Initializable {
         Alert alert = new Alert(type);
         alert.setHeaderText(text);
         alert.showAndWait();
+    }
+    private void showLoginInformationDialog(){
+        Dialog<Pair<String, String>> dialog = new Dialog(); 
+        dialog.setTitle("Okno logowania");
+        dialog.setHeaderText("Podaj swoje dane: ");
+        ButtonType signInButtonType = new ButtonType("Sign in", ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(signInButtonType, ButtonType.CANCEL);
+        GridPane grid = new GridPane(); 
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+        TextField usernameTextField = new TextField(); 
+        usernameTextField.setPromptText("Login");
+        PasswordField passwordField = new PasswordField(); 
+        passwordField.setPromptText("Hasło");
+        grid.add(new Label("Username:"), 0, 0);
+        grid.add(usernameTextField, 1, 0);
+        grid.add(new Label("Password:"), 0, 1);
+        grid.add(passwordField, 1, 1);
+        Node signInButton = dialog.getDialogPane().lookupButton(signInButtonType);
+        signInButton.setDisable(true);
+        usernameTextField.textProperty().addListener((observable, oldValue, newValue) -> signInButton.setDisable(newValue.trim().isEmpty()));
+        dialog.getDialogPane().setContent(grid);
+        dialog.setResultConverter(dialogButton -> {
+            if(dialogButton == signInButtonType)
+                return new Pair(usernameTextField.getText(), passwordField.getText());
+            return null;
+        });
+        Optional<Pair<String, String>> result = dialog.showAndWait();
+        if(result.isPresent()){
+            Pair<String, String> data = result.get();
+            login = data.getKey();
+            password = data.getValue();
+        }else System.exit(0);
+    }
+    private void showURLDialog(){
+        TextInputDialog urlDialog = new TextInputDialog();
+        urlDialog.setTitle("Okno URL");
+        urlDialog.setContentText("Podaj adres URL (np. \n"
+                + "jdbc:mysql://localhost:3306/ksiazkaadresowa)");
+        Optional<String> result = urlDialog.showAndWait();
+        if(result.isPresent()) url = result.get();
+        else System.exit(0);
     }
 }
